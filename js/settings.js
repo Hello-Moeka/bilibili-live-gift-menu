@@ -1,5 +1,5 @@
 import { parseConfigFromUrl, buildDisplayUrl } from './config.js';
-import { fetchGiftList, searchGifts, getGiftIcon, formatGiftPrice } from './gifts.js';
+import { fetchGiftList, searchGifts, getGiftIcon, formatGiftPrice, PINNED_GIFTS, getGiftById } from './gifts.js';
 import { renderMenu, FONT_PRESETS, normalizeStyle } from './render.js';
 
 /** @type {object[]} */
@@ -66,34 +66,55 @@ function renderPreview(cfg) {
   previewRoot.appendChild(overlay);
 }
 
+function appendGiftOption(dropdown, row, gift) {
+  const opt = document.createElement('div');
+  opt.className = 'gift-option';
+  opt.dataset.giftId = gift.id;
+  const img = document.createElement('img');
+  img.src = getGiftIcon(gift);
+  img.alt = '';
+  const name = document.createElement('span');
+  name.textContent = gift.name;
+  const meta = document.createElement('span');
+  meta.className = 'gift-meta';
+  meta.textContent = `#${gift.id} · ${formatGiftPrice(gift)}`;
+  opt.append(img, name, meta);
+  opt.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    selectGift(row, gift);
+  });
+  dropdown.appendChild(opt);
+}
+
 function buildGiftDropdown(row, input) {
   const dropdown = row.querySelector('.gift-dropdown');
   const keyword = input.value.trim();
-  const results = searchGifts(giftList, keyword).slice(0, 50);
+  const results = searchGifts(giftList, keyword);
 
   dropdown.innerHTML = '';
   if (results.length === 0) {
     dropdown.innerHTML = '<div class="gift-option" style="cursor:default;color:var(--text-muted)">无匹配礼物</div>';
   } else {
-    results.forEach((gift) => {
-      const opt = document.createElement('div');
-      opt.className = 'gift-option';
-      opt.dataset.giftId = gift.id;
-      const img = document.createElement('img');
-      img.src = getGiftIcon(gift);
-      img.alt = '';
-      const name = document.createElement('span');
-      name.textContent = gift.name;
-      const meta = document.createElement('span');
-      meta.className = 'gift-meta';
-      meta.textContent = `#${gift.id} · ${formatGiftPrice(gift)}`;
-      opt.append(img, name, meta);
-      opt.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        selectGift(row, gift);
-      });
-      dropdown.appendChild(opt);
-    });
+    const pinnedResults = results.filter((g) => PINNED_GIFTS.some((p) => p.id === g.id));
+    const otherResults = results.filter((g) => !PINNED_GIFTS.some((p) => p.id === g.id));
+
+    if (pinnedResults.length > 0) {
+      const label = document.createElement('div');
+      label.className = 'gift-dropdown-label';
+      label.textContent = '大航海';
+      dropdown.appendChild(label);
+      pinnedResults.forEach((gift) => appendGiftOption(dropdown, row, gift));
+    }
+
+    if (otherResults.length > 0) {
+      if (pinnedResults.length > 0) {
+        const label = document.createElement('div');
+        label.className = 'gift-dropdown-label';
+        label.textContent = '全部礼物';
+        dropdown.appendChild(label);
+      }
+      otherResults.forEach((gift) => appendGiftOption(dropdown, row, gift));
+    }
   }
   dropdown.classList.add('open');
 }
@@ -130,7 +151,7 @@ function createItemRow(item = createEmptyItem()) {
   giftInput.placeholder = '搜索礼物名称或 ID…';
   giftInput.value = item.giftName || '';
   if (item.giftId && !item.giftName) {
-    const g = giftList.find((x) => x.id === item.giftId);
+    const g = giftList.find((x) => x.id === item.giftId) || getGiftById(item.giftId);
     if (g) giftInput.value = g.name;
   }
   const dropdown = document.createElement('div');
