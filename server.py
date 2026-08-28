@@ -12,7 +12,7 @@ GIFT_API = (
     "https://api.live.bilibili.com/xlive/web-room/v1/giftPanel/giftConfig"
     "?platform=pc&source=live"
 )
-PORT = int(os.environ.get("PORT", "8765"))
+PORT = int(os.environ.get("PORT", "38456"))
 
 
 class Handler(SimpleHTTPRequestHandler):
