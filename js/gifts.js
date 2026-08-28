@@ -1,42 +1,34 @@
 const GIFT_API = 'https://api.live.bilibili.com/xlive/web-room/v1/giftPanel/giftConfig?platform=pc&source=live';
 
-/** 固定置顶的大航海礼物（始终显示在礼物栏顶部） */
-export const PINNED_GIFTS = [
+/** 大航海固定项（非标准礼物，使用本地图标） */
+export const GUARD_ITEMS = [
   {
-    id: 33972,
+    id: 100003,
     name: '舰长',
-    price: 198000,
-    coin_type: 'gold',
-    img_basic: 'https://s1.hdslb.com/bfs/live/a97726f370a5aa6d5e6100b042bee848efc560f6.png',
-    pinned: true,
+    priceLabel: '198元/月',
+    img_basic: 'assets/guards/jianzhang.png',
+    isGuard: true,
   },
   {
-    id: 33908,
+    id: 100002,
     name: '提督',
-    price: 1998000,
-    coin_type: 'gold',
-    img_basic: 'https://s1.hdslb.com/bfs/live/af5b620387a20a8b65b9bd6fc47cf9058a8bbd85.png',
-    pinned: true,
+    priceLabel: '1998元/月',
+    img_basic: 'assets/guards/tidu.png',
+    isGuard: true,
   },
   {
-    id: 33909,
+    id: 100001,
     name: '总督',
-    price: 19998000,
-    coin_type: 'gold',
-    img_basic: 'https://s1.hdslb.com/bfs/live/52e00ca134a8a41f08b203eb5886875507e4b44e.png',
-    pinned: true,
+    priceLabel: '19998元/月',
+    img_basic: 'assets/guards/zongdu.png',
+    isGuard: true,
   },
 ];
 
-const PINNED_IDS = new Set(PINNED_GIFTS.map((g) => g.id));
+const GUARD_IDS = new Set(GUARD_ITEMS.map((g) => g.id));
 
 /** @type {Map<number, object>} */
 let giftCache = null;
-
-function mergePinnedGifts(list) {
-  const rest = list.filter((g) => !PINNED_IDS.has(g.id));
-  return [...PINNED_GIFTS, ...rest];
-}
 
 /**
  * 获取礼物列表（设置页每次打开时调用）
@@ -50,30 +42,34 @@ export async function fetchGiftList(apiBase = '') {
   if (!res.ok) throw new Error(`礼物列表请求失败 (${res.status})`);
   const data = await res.json();
   if (data.code !== 0) throw new Error(data.message || '礼物列表返回异常');
-  const list = mergePinnedGifts(data.data?.list || []);
+  const list = data.data?.list || [];
   giftCache = new Map(list.map((g) => [g.id, g]));
+  GUARD_ITEMS.forEach((g) => giftCache.set(g.id, g));
   return list;
 }
 
 /** @param {number} id */
 export function getGiftById(id) {
-  return giftCache?.get(Number(id)) ?? PINNED_GIFTS.find((g) => g.id === Number(id)) ?? null;
+  const numId = Number(id);
+  return GUARD_ITEMS.find((g) => g.id === numId)
+    ?? giftCache?.get(numId)
+    ?? null;
 }
 
-function matchesKeyword(gift, kw) {
-  return String(gift.name).toLowerCase().includes(kw)
-    || String(gift.id).includes(kw);
+function matchesKeyword(item, kw) {
+  return String(item.name).toLowerCase().includes(kw)
+    || String(item.id).includes(kw);
 }
 
-/** 按名称搜索礼物，置顶项始终优先显示 */
+/** 搜索礼物，大航海项始终优先 */
 export function searchGifts(list, keyword) {
   const kw = keyword.trim().toLowerCase();
-  const pinned = kw
-    ? PINNED_GIFTS.filter((g) => matchesKeyword(g, kw))
-    : PINNED_GIFTS;
+  const guards = kw
+    ? GUARD_ITEMS.filter((g) => matchesKeyword(g, kw))
+    : GUARD_ITEMS;
   const others = (kw ? list.filter((g) => matchesKeyword(g, kw)) : list)
-    .filter((g) => !PINNED_IDS.has(g.id));
-  return [...pinned, ...others].slice(0, 50);
+    .filter((g) => !GUARD_IDS.has(g.id));
+  return [...guards, ...others].slice(0, 50);
 }
 
 /** @param {object} gift */
@@ -81,9 +77,17 @@ export function getGiftIcon(gift) {
   return gift?.img_basic || gift?.img_dynamic || gift?.gif || '';
 }
 
+/** 将图标路径转为完整 URL，便于写入 OBS 配置 */
+export function resolveGiftIconUrl(icon) {
+  if (!icon) return '';
+  if (/^https?:\/\//i.test(icon)) return icon;
+  return new URL(icon, location.href).href;
+}
+
 /** B 站金瓜子 1000 = 1 元 */
 export function formatGiftPrice(gift) {
   if (!gift) return '';
+  if (gift.priceLabel) return gift.priceLabel;
   if (gift.coin_type === 'silver') {
     return `${gift.price}银瓜子`;
   }

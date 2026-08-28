@@ -1,5 +1,5 @@
 import { parseConfigFromUrl, buildDisplayUrl } from './config.js';
-import { fetchGiftList, searchGifts, getGiftIcon, formatGiftPrice, PINNED_GIFTS, getGiftById } from './gifts.js';
+import { fetchGiftList, searchGifts, getGiftIcon, formatGiftPrice, GUARD_ITEMS, getGiftById, resolveGiftIconUrl } from './gifts.js';
 import { renderMenu, FONT_PRESETS, normalizeStyle } from './render.js';
 
 /** @type {object[]} */
@@ -95,19 +95,19 @@ function buildGiftDropdown(row, input) {
   if (results.length === 0) {
     dropdown.innerHTML = '<div class="gift-option" style="cursor:default;color:var(--text-muted)">无匹配礼物</div>';
   } else {
-    const pinnedResults = results.filter((g) => PINNED_GIFTS.some((p) => p.id === g.id));
-    const otherResults = results.filter((g) => !PINNED_GIFTS.some((p) => p.id === g.id));
+    const guardResults = results.filter((g) => GUARD_ITEMS.some((p) => p.id === g.id));
+    const otherResults = results.filter((g) => !GUARD_ITEMS.some((p) => p.id === g.id));
 
-    if (pinnedResults.length > 0) {
+    if (guardResults.length > 0) {
       const label = document.createElement('div');
       label.className = 'gift-dropdown-label';
       label.textContent = '大航海';
       dropdown.appendChild(label);
-      pinnedResults.forEach((gift) => appendGiftOption(dropdown, row, gift));
+      guardResults.forEach((gift) => appendGiftOption(dropdown, row, gift));
     }
 
     if (otherResults.length > 0) {
-      if (pinnedResults.length > 0) {
+      if (guardResults.length > 0) {
         const label = document.createElement('div');
         label.className = 'gift-dropdown-label';
         label.textContent = '全部礼物';
@@ -121,7 +121,7 @@ function buildGiftDropdown(row, input) {
 
 function selectGift(row, gift) {
   row.dataset.giftId = gift.id;
-  row.dataset.giftIcon = getGiftIcon(gift);
+  row.dataset.giftIcon = resolveGiftIconUrl(getGiftIcon(gift));
   const preview = row.querySelector('.gift-preview');
   preview.src = getGiftIcon(gift);
   preview.style.visibility = 'visible';
