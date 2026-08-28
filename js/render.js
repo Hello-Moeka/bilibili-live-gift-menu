@@ -51,7 +51,7 @@ function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-/** @param {HTMLElement} root @param {{ items: object[], style?: MenuStyle }} config */
+/** @param {HTMLElement} root @param {{ items: object[], style?: MenuStyle, parseError?: string | null }} config */
 export function renderMenu(root, config) {
   const style = normalizeStyle(config.style);
   const validItems = (config.items || []).filter((item) => item.giftId && item.text);
@@ -60,7 +60,10 @@ export function renderMenu(root, config) {
   applyMenuStyle(root, style);
 
   if (validItems.length === 0) {
-    root.innerHTML = '<div class="menu-empty">暂无菜单项，请通过设置页配置</div>';
+    const message = config.parseError === 'invalid'
+      ? '配置链接无效或已被截断，请在设置页重新复制完整链接'
+      : '暂无菜单项，请通过设置页配置';
+    root.innerHTML = `<div class="menu-empty">${message}</div>`;
     return;
   }
 

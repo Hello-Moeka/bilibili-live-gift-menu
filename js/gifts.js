@@ -114,11 +114,33 @@ export function bindGiftImage(img, gift) {
   }
 }
 
+/** 写入 OBS 链接时尽量缩短：同站资源保留相对路径 */
+export function serializeGiftIconUrl(icon) {
+  if (!icon) return '';
+  if (/^https?:\/\//i.test(icon)) {
+    try {
+      const url = new URL(icon);
+      if (url.origin === location.origin) {
+        return url.pathname.replace(/^\//, '') + url.search + url.hash;
+      }
+    } catch {
+      // 忽略无效 URL
+    }
+    return icon;
+  }
+  return icon.replace(/^\//, '');
+}
+
 /** 将图标路径转为完整 URL，便于写入 OBS 配置 */
 export function resolveGiftIconUrl(icon) {
   if (!icon) return '';
   if (/^https?:\/\//i.test(icon)) return icon;
   return new URL(icon, location.href).href;
+}
+
+/** 展示页导出用：优先静态图，URL 更短且无需防盗链 */
+export function getGiftIconForExport(gift) {
+  return gift?.img_basic || gift?.gif || gift?.img_dynamic || '';
 }
 
 /** B 站金瓜子 1000 = 1 元 */

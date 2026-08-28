@@ -1,5 +1,5 @@
 import { loadSettingsConfig, buildDisplayUrl, saveDraft, syncSettingsUrl } from './config.js';
-import { fetchGiftList, searchGifts, getGiftIcon, formatGiftPrice, GUARD_ITEMS, getGiftById, resolveGiftIconUrl, bindGiftImage } from './gifts.js';
+import { fetchGiftList, searchGifts, getGiftIcon, getGiftIconForExport, formatGiftPrice, GUARD_ITEMS, getGiftById, serializeGiftIconUrl, bindGiftImage } from './gifts.js';
 import { renderMenu, FONT_PRESETS, normalizeStyle } from './render.js';
 
 /** @type {object[]} */
@@ -81,7 +81,7 @@ function getConfigFromForm() {
       giftId: Number(row.dataset.giftId) || 0,
       count: Math.max(1, Number(row.querySelector('.count-input')?.value) || 1),
       text: row.querySelector('.text-input')?.value.trim() || '',
-      icon: row.dataset.giftIcon || '',
+      icon: serializeGiftIconUrl(row.dataset.giftIcon || ''),
       giftName: row.querySelector('.gift-select-input')?.value.trim() || '',
     })),
   };
@@ -94,6 +94,9 @@ function updateUrl() {
   saveDraft(config);
   syncSettingsUrl(config);
   renderPreview(config);
+  if (url.length > 1800) {
+    setStatus('error', `链接较长（${url.length} 字符），粘贴到 OBS 时可能被截断，请确认完整复制`);
+  }
 }
 
 function renderPreview(cfg) {
@@ -157,7 +160,7 @@ function buildGiftDropdown(row, input) {
 
 function selectGift(row, gift) {
   row.dataset.giftId = gift.id;
-  row.dataset.giftIcon = resolveGiftIconUrl(getGiftIcon(gift));
+  row.dataset.giftIcon = serializeGiftIconUrl(getGiftIconForExport(gift));
   const preview = row.querySelector('.gift-preview');
   bindGiftImage(preview, gift);
   preview.style.visibility = 'visible';

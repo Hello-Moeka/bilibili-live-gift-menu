@@ -29,12 +29,12 @@ function fromBase64Url(b64) {
   return new TextDecoder().decode(bytes);
 }
 
-/** @returns {{ items: object[], style: object }} */
+/** @returns {{ items: object[], style: object, parseError?: string | null }} */
 export function parseConfigFromUrl(search = location.search) {
   const params = new URLSearchParams(search);
   const encoded = params.get('c');
   if (!encoded) {
-    return { items: [], style: normalizeStyle() };
+    return { items: [], style: normalizeStyle(), parseError: null };
   }
   try {
     const json = fromBase64Url(encoded);
@@ -42,27 +42,37 @@ export function parseConfigFromUrl(search = location.search) {
     return {
       items: Array.isArray(data.items) ? data.items : [],
       style: normalizeStyle(data.style),
+      parseError: null,
     };
   } catch {
-    return { items: [], style: normalizeStyle() };
+    return {
+      items: [],
+      style: normalizeStyle(),
+      parseError: 'invalid',
+    };
   }
 }
 
 /** @param {{ items: object[], style?: object }} config */
 export function encodeConfigToParam(config) {
-  return encodeDraftToParam(config, { validOnly: true });
+  return encodeDraftToParam(config, { validOnly: true, forDisplay: true });
 }
 
-/** @param {{ items: object[], style?: object }} config @param {{ validOnly?: boolean }} [options] */
-export function encodeDraftToParam(config, { validOnly = false } = {}) {
+/** @param {{ items: object[], style?: object }} config @param {{ validOnly?: boolean, forDisplay?: boolean }} [options] */
+export function encodeDraftToParam(config, { validOnly = false, forDisplay = false } = {}) {
   const style = normalizeStyle(config.style);
-  let items = (config.items || []).map((item) => ({
-    giftId: Number(item.giftId) || 0,
-    count: Math.max(1, Number(item.count) || 1),
-    text: String(item.text || '').trim(),
-    icon: item.icon || '',
-    giftName: item.giftName || '',
-  }));
+  let items = (config.items || []).map((item) => {
+    const mapped = {
+      giftId: Number(item.giftId) || 0,
+      count: Math.max(1, Number(item.count) || 1),
+      text: String(item.text || '').trim(),
+      icon: item.icon || '',
+    };
+    if (!forDisplay) {
+      mapped.giftName = item.giftName || '';
+    }
+    return mapped;
+  });
 
   if (validOnly) {
     items = items.filter((item) => item.giftId && item.text);
