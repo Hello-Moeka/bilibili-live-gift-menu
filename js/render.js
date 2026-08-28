@@ -12,11 +12,22 @@ export const DEFAULT_STYLE = {
 export const FONT_PRESETS = [
   { label: '苹方 / 冬青黑体', value: 'PingFang SC, Hiragino Sans GB, sans-serif' },
   { label: '微软雅黑', value: 'Microsoft YaHei, PingFang SC, sans-serif' },
+  { label: '思源黑体', value: 'Source Han Sans SC, Noto Sans SC, sans-serif' },
+  { label: 'Noto Sans SC', value: '"Noto Sans SC", "Source Han Sans SC", sans-serif' },
+  { label: '等线', value: 'DengXian, "Microsoft YaHei", sans-serif' },
   { label: '黑体', value: 'SimHei, Microsoft YaHei, sans-serif' },
   { label: '宋体', value: 'SimSun, STSong, serif' },
+  { label: '仿宋', value: 'FangSong, STFangsong, serif' },
   { label: '楷体', value: 'KaiTi, STKaiti, serif' },
-  { label: '思源黑体', value: 'Source Han Sans SC, Noto Sans SC, sans-serif' },
+  { label: '隶书', value: 'LiSu, STLiti, serif' },
+  { label: '幼圆', value: 'YouYuan, "Yuanti SC", sans-serif' },
+  { label: '华文细黑', value: 'STXihei, "Microsoft YaHei", sans-serif' },
+  { label: '微软正黑体', value: '"Microsoft JhengHei", "PingFang TC", sans-serif' },
+  { label: 'Segoe UI', value: '"Segoe UI", "Microsoft YaHei", sans-serif' },
   { label: 'Arial', value: 'Arial, Helvetica, sans-serif' },
+  { label: 'Times New Roman', value: '"Times New Roman", Times, serif' },
+  { label: 'Georgia', value: 'Georgia, "Times New Roman", serif' },
+  { label: 'Impact', value: 'Impact, Haettenschweiler, sans-serif' },
 ];
 
 /** @param {Partial<MenuStyle>} style */

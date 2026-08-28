@@ -60,6 +60,14 @@ header a:hover {
   text-decoration: underline;
 }
 
+.header-repo {
+  margin-top: 4px;
+}
+
+.header-repo a {
+  color: var(--accent);
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);

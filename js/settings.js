@@ -212,12 +212,21 @@ function populateFontSelect() {
   });
 }
 
+function ensureFontOption(fontFamily) {
+  if (!fontFamily || FONT_PRESETS.some((p) => p.value === fontFamily)) return;
+  const opt = document.createElement('option');
+  opt.value = fontFamily;
+  opt.textContent = '已保存的字体';
+  fontFamilyInput.appendChild(opt);
+}
+
 function applyStyleToForm(style) {
   const s = normalizeStyle(style);
   bgInput.checked = s.bg;
+  ensureFontOption(s.fontFamily);
   fontFamilyInput.value = FONT_PRESETS.some((p) => p.value === s.fontFamily)
     ? s.fontFamily
-    : FONT_PRESETS[0].value;
+    : (s.fontFamily || FONT_PRESETS[0].value);
   fontSizeInput.value = s.fontSize;
   subtitleSizeInput.value = s.subtitleSize;
   colorInput.value = toHexColor(s.color, '#ffffff');
