@@ -2,12 +2,14 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <meta name="referrer" content="no-referrer">
   <meta name="description" content="哔哩哔哩直播间礼物菜单 OBS 浏览器源展示页">
   <title>礼物菜单</title>
   <link rel="stylesheet" href="css/display.css">
 </head>
 <body class="page-display">
   <div class="menu-overlay" id="menu-root"></div>
-  <script type="module" src="js/display.js"></script>
+  <!-- 普通 script：兼容直播姬 / 旧版 OBS（不支持 ES Module） -->
+  <script src="js/display.bundle.js"></script>
 </body>
 </html>

@@ -93,5 +93,6 @@ export function renderMenu(root, config) {
     list.appendChild(li);
   });
 
-  root.replaceChildren(list);
+  root.innerHTML = '';
+  root.appendChild(list);
 }
