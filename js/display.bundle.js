@@ -7,6 +7,13 @@
     fontFamily: 'PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif',
     fontSize: 22,
     color: '#ffffff',
+    roomId: '2233',
+  };
+
+  var GUARD_ICONS = {
+    100003: 'assets/guards/jianzhang.png',
+    100002: 'assets/guards/tidu.png',
+    100001: 'assets/guards/zongdu.png',
   };
 
   function normalizeStyle(style) {
@@ -16,6 +23,7 @@
       fontFamily: style.fontFamily || DEFAULT_STYLE.fontFamily,
       fontSize: Math.max(12, Number(style.fontSize) || DEFAULT_STYLE.fontSize),
       color: style.color || DEFAULT_STYLE.color,
+      roomId: String(style.roomId || style.r || DEFAULT_STYLE.roomId),
     };
   }
 
@@ -52,6 +60,33 @@
     return match ? decodeURIComponent(match[1].replace(/\+/g, ' ')) : null;
   }
 
+  function expandParsedConfig(data) {
+    if (Array.isArray(data.i)) {
+      var s = data.s || {};
+      return {
+        items: data.i.map(function (item) {
+          return {
+            giftId: Number(item.g) || 0,
+            count: Math.max(1, Number(item.n) || 1),
+            text: String(item.t || '').trim(),
+            icon: item.icon || '',
+          };
+        }),
+        style: normalizeStyle({
+          bg: s.b != null ? s.b : s.bg,
+          fontSize: s.z != null ? s.z : s.fontSize,
+          color: s.c || s.color,
+          fontFamily: s.f || s.fontFamily,
+          roomId: s.r || s.roomId,
+        }),
+      };
+    }
+    return {
+      items: Array.isArray(data.items) ? data.items : [],
+      style: normalizeStyle(data.style),
+    };
+  }
+
   function parseConfigFromUrl(search) {
     search = search || location.search;
     var encoded = getQueryParam('c', search);
@@ -60,9 +95,10 @@
     }
     try {
       var data = JSON.parse(fromBase64Url(encoded));
+      var expanded = expandParsedConfig(data);
       return {
-        items: Array.isArray(data.items) ? data.items : [],
-        style: normalizeStyle(data.style),
+        items: expanded.items,
+        style: expanded.style,
         parseError: null,
       };
     } catch (e) {
@@ -86,11 +122,7 @@
 
   function applyMenuStyle(overlay, style) {
     var s = normalizeStyle(style);
-    if (s.bg) {
-      overlay.className = 'menu-overlay has-bg';
-    } else {
-      overlay.className = 'menu-overlay';
-    }
+    overlay.className = s.bg ? 'menu-overlay has-bg' : 'menu-overlay';
     overlay.style.fontFamily = s.fontFamily;
     overlay.style.setProperty('--menu-font-size', s.fontSize + 'px');
     overlay.style.setProperty('--menu-color', s.color);
@@ -118,12 +150,17 @@
       var li = document.createElement('li');
       li.className = 'menu-item';
 
-      var icon = document.createElement('img');
-      icon.className = 'gift-icon';
-      icon.alt = '';
-      icon.referrerPolicy = 'no-referrer';
-      icon.src = resolveIcon(item.icon || '');
-      icon.onerror = function () { icon.style.visibility = 'hidden'; };
+      var iconEl = document.createElement('img');
+      iconEl.className = 'gift-icon';
+      iconEl.alt = '';
+      iconEl.referrerPolicy = 'no-referrer';
+      var iconSrc = resolveIcon(item.icon || GUARD_ICONS[item.giftId] || '');
+      if (iconSrc) {
+        iconEl.src = iconSrc;
+        iconEl.onerror = function () { iconEl.style.visibility = 'hidden'; };
+      } else {
+        iconEl.style.visibility = 'hidden';
+      }
 
       var body = document.createElement('div');
       body.className = 'item-body';
@@ -133,7 +170,7 @@
       main.innerHTML = '<span class="count">x' + (item.count || 1) + '</span>' + escapeHtml(item.text);
       body.appendChild(main);
 
-      li.appendChild(icon);
+      li.appendChild(iconEl);
       li.appendChild(body);
       list.appendChild(li);
     });
@@ -142,14 +179,73 @@
     root.appendChild(list);
   }
 
+  function applyGiftIcons(items, iconMap) {
+    items.forEach(function (item) {
+      if (item.icon) return;
+      if (GUARD_ICONS[item.giftId]) {
+        item.icon = GUARD_ICONS[item.giftId];
+        return;
+      }
+      var gift = iconMap[item.giftId];
+      if (gift) {
+        item.icon = gift.gif || gift.img_basic || gift.img_dynamic || '';
+      }
+    });
+  }
+
+  function fetchGiftIconMap(roomId, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/api/gifts?room_id=' + encodeURIComponent(roomId || '2233'));
+    xhr.onload = function () {
+      var map = {};
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          var data = JSON.parse(xhr.responseText);
+          (data.data && data.data.list ? data.data.list : []).forEach(function (gift) {
+            map[gift.id] = gift;
+          });
+        } catch (e) {
+          // 忽略
+        }
+      }
+      callback(map);
+    };
+    xhr.onerror = function () { callback({}); };
+    xhr.send();
+  }
+
+  function needsRemoteIcons(items) {
+    return items.some(function (item) {
+      return !item.icon && !GUARD_ICONS[item.giftId];
+    });
+  }
+
   function boot() {
     var root = document.getElementById('menu-root');
     if (!root) return;
+
+    var config;
     try {
-      renderMenu(root, parseConfigFromUrl());
+      config = parseConfigFromUrl();
     } catch (e) {
       root.innerHTML = '<div class="menu-empty">页面脚本异常，请刷新浏览器源</div>';
+      return;
     }
+
+    if (config.parseError) {
+      renderMenu(root, config);
+      return;
+    }
+
+    applyGiftIcons(config.items, {});
+    renderMenu(root, config);
+
+    if (!needsRemoteIcons(config.items)) return;
+
+    fetchGiftIconMap(config.style.roomId, function (map) {
+      applyGiftIcons(config.items, map);
+      renderMenu(root, config);
+    });
   }
 
   if (document.readyState === 'loading') {

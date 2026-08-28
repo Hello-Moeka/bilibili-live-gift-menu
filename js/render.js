@@ -28,13 +28,14 @@ export const FONT_PRESETS = [
   { label: 'Impact', value: 'Impact, Haettenschweiler, sans-serif' },
 ];
 
-/** @param {Partial<MenuStyle>} style */
+/** @param {Partial<MenuStyle & { roomId?: string }>} style */
 export function normalizeStyle(style = {}) {
   return {
     bg: Boolean(style.bg),
     fontFamily: style.fontFamily || DEFAULT_STYLE.fontFamily,
     fontSize: Math.max(12, Number(style.fontSize) || DEFAULT_STYLE.fontSize),
     color: style.color || DEFAULT_STYLE.color,
+    roomId: String(style.roomId || style.r || '2233'),
   };
 }
 

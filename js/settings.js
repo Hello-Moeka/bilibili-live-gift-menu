@@ -89,13 +89,13 @@ function getConfigFromForm() {
 
 function updateUrl() {
   config = getConfigFromForm();
-  const url = buildDisplayUrl(config, 'index.html');
+  const url = buildDisplayUrl(config, 'index.html', getRoomId());
   urlInput.value = url;
   saveDraft(config);
   syncSettingsUrl(config);
   renderPreview(config);
-  if (url.length > 1800) {
-    setStatus('error', `链接较长（${url.length} 字符），粘贴到 OBS 时可能被截断，请确认完整复制`);
+  if (url.length > 800) {
+    setStatus('error', `链接较长（${url.length} 字符），直播姬可能截断，请确认完整复制`);
   }
 }
 

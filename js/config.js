@@ -2,14 +2,14 @@
  * 礼物菜单配置 — URL 参数编解码
  * 参数: ?c=<base64url JSON>
  *
- * JSON 结构:
- * {
- *   items: Array<{ giftId, count, text, icon?, giftName? }>,
- *   style?: { bg, fontFamily, fontSize, color }
- * }
+ * 展示页短格式（直播姬 URL 长度限制）:
+ * { i: [{ g, n, t }], s: { b, z, c, f?, r? } }
+ *
+ * 设置页草稿完整格式:
+ * { items: [{ giftId, count, text, icon?, giftName? }], style?: {...} }
  */
 
-import { normalizeStyle } from './render.js';
+import { normalizeStyle, DEFAULT_STYLE } from './render.js';
 
 function toBase64Url(str) {
   const bytes = new TextEncoder().encode(str);
@@ -29,6 +29,31 @@ function fromBase64Url(b64) {
   return new TextDecoder().decode(bytes);
 }
 
+function expandParsedConfig(data) {
+  if (Array.isArray(data.i)) {
+    const s = data.s || {};
+    return {
+      items: data.i.map((item) => ({
+        giftId: Number(item.g) || 0,
+        count: Math.max(1, Number(item.n) || 1),
+        text: String(item.t || '').trim(),
+        icon: item.icon || '',
+      })),
+      style: normalizeStyle({
+        bg: s.b ?? s.bg,
+        fontSize: s.z ?? s.fontSize,
+        color: s.c ?? s.color,
+        fontFamily: s.f ?? s.fontFamily,
+        roomId: s.r ?? s.roomId,
+      }),
+    };
+  }
+  return {
+    items: Array.isArray(data.items) ? data.items : [],
+    style: normalizeStyle(data.style),
+  };
+}
+
 /** @returns {{ items: object[], style: object, parseError?: string | null }} */
 export function parseConfigFromUrl(search = location.search) {
   const params = new URLSearchParams(search);
@@ -39,9 +64,10 @@ export function parseConfigFromUrl(search = location.search) {
   try {
     const json = fromBase64Url(encoded);
     const data = JSON.parse(json);
+    const expanded = expandParsedConfig(data);
     return {
-      items: Array.isArray(data.items) ? data.items : [],
-      style: normalizeStyle(data.style),
+      items: expanded.items,
+      style: expanded.style,
       parseError: null,
     };
   } catch {
@@ -53,26 +79,49 @@ export function parseConfigFromUrl(search = location.search) {
   }
 }
 
-/** @param {{ items: object[], style?: object }} config */
-export function encodeConfigToParam(config) {
-  return encodeDraftToParam(config, { validOnly: true, forDisplay: true });
+/** @param {{ items: object[], style?: object }} config @param {string} [roomId] */
+export function encodeConfigToParam(config, roomId = '2233') {
+  const style = normalizeStyle(config.style);
+  const items = (config.items || [])
+    .map((item) => ({
+      giftId: Number(item.giftId) || 0,
+      count: Math.max(1, Number(item.count) || 1),
+      text: String(item.text || '').trim(),
+    }))
+    .filter((item) => item.giftId && item.text);
+
+  const shortStyle = {
+    b: style.bg ? 1 : 0,
+    z: style.fontSize,
+    c: style.color,
+  };
+  if (style.fontFamily && style.fontFamily !== DEFAULT_STYLE.fontFamily) {
+    shortStyle.f = style.fontFamily;
+  }
+  if (roomId && roomId !== '2233') {
+    shortStyle.r = roomId;
+  }
+
+  const payload = {
+    i: items.map((item) => ({ g: item.giftId, n: item.count, t: item.text })),
+    s: shortStyle,
+  };
+  return toBase64Url(JSON.stringify(payload));
 }
 
 /** @param {{ items: object[], style?: object }} config @param {{ validOnly?: boolean, forDisplay?: boolean }} [options] */
 export function encodeDraftToParam(config, { validOnly = false, forDisplay = false } = {}) {
+  if (forDisplay) {
+    throw new Error('forDisplay 请使用 encodeConfigToParam');
+  }
   const style = normalizeStyle(config.style);
-  let items = (config.items || []).map((item) => {
-    const mapped = {
-      giftId: Number(item.giftId) || 0,
-      count: Math.max(1, Number(item.count) || 1),
-      text: String(item.text || '').trim(),
-      icon: item.icon || '',
-    };
-    if (!forDisplay) {
-      mapped.giftName = item.giftName || '';
-    }
-    return mapped;
-  });
+  let items = (config.items || []).map((item) => ({
+    giftId: Number(item.giftId) || 0,
+    count: Math.max(1, Number(item.count) || 1),
+    text: String(item.text || '').trim(),
+    icon: item.icon || '',
+    giftName: item.giftName || '',
+  }));
 
   if (validOnly) {
     items = items.filter((item) => item.giftId && item.text);
@@ -138,9 +187,9 @@ export function syncSettingsUrl(config) {
   history.replaceState(null, '', url);
 }
 
-/** @param {{ items: object[] }} config @param {string} [basePath] */
-export function buildDisplayUrl(config, basePath = 'index.html') {
-  const param = encodeConfigToParam(config);
+/** @param {{ items: object[] }} config @param {string} [basePath] @param {string} [roomId] */
+export function buildDisplayUrl(config, basePath = 'index.html', roomId = '2233') {
+  const param = encodeConfigToParam(config, roomId);
   const url = new URL(basePath, location.href);
   url.search = `c=${param}`;
   return url.href;
