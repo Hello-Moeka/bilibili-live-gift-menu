@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>礼物菜单设置</title>
+  <link rel="stylesheet" href="css/display.css">
+  <link rel="stylesheet" href="css/settings.css">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>哔哩哔哩直播间 · 礼物菜单设置</h1>
+      <p>配置完成后复制下方链接，粘贴到 OBS 浏览器源即可。<a href="index.html">查看展示页</a></p>
+    </header>
+
+    <div id="status-bar" class="status-bar loading">初始化中…</div>
+
+    <div class="card">
+      <h2>外观设置</h2>
+      <div class="style-grid">
+        <div class="field field-checkbox">
+          <label>
+            <input type="checkbox" id="bg-input">
+            显示深蓝背景（默认透明，适合 OBS）
+          </label>
+        </div>
+        <div class="field">
+          <label for="font-family-input">字体</label>
+          <select id="font-family-input"></select>
+        </div>
+        <div class="field">
+          <label for="font-size-input">主文字号 (px)</label>
+          <input type="number" id="font-size-input" min="12" max="72" value="22">
+        </div>
+        <div class="field">
+          <label for="subtitle-size-input">副标题字号 (px)</label>
+          <input type="number" id="subtitle-size-input" min="10" max="48" value="14">
+        </div>
+        <div class="field">
+          <label for="color-input">主文字颜色</label>
+          <input type="color" id="color-input" value="#ffffff">
+        </div>
+        <div class="field">
+          <label for="subtitle-color-input">副标题颜色</label>
+          <input type="color" id="subtitle-color-input" value="#b8b8b8">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>菜单项</h2>
+      <div id="menu-items" class="menu-items"></div>
+      <div class="btn-row" style="margin-top: 14px">
+        <button type="button" id="add-item-btn" class="btn btn-secondary">+ 添加菜单项</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>预览 & 导出</h2>
+      <div class="preview-wrap">
+        <h3>实时预览</h3>
+        <div id="preview-root"></div>
+      </div>
+      <div class="url-output">
+        <label for="url-output">OBS 浏览器源地址（配置已编码在 URL 中）</label>
+        <div class="url-box">
+          <input type="text" id="url-output" readonly>
+          <button type="button" id="copy-url-btn" class="btn btn-primary">复制链接</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/settings.js"></script>
+</body>
+</html>
