@@ -63,7 +63,7 @@ body.page-display {
 
 .menu-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
 }
 
@@ -78,8 +78,7 @@ body.page-display {
 .item-body {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding-top: 4px;
+  justify-content: center;
 }
 
 .item-main {

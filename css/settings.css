@@ -360,6 +360,13 @@ header a:hover {
   outline: none;
 }
 
+.url-hint {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
 .status-bar {
   display: flex;
   align-items: center;
