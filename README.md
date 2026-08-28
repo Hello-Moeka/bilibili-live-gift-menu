@@ -49,9 +49,7 @@ python server.py
     "bg": false,
     "fontFamily": "PingFang SC, Hiragino Sans GB, sans-serif",
     "fontSize": 22,
-    "subtitleSize": 14,
-    "color": "#ffffff",
-    "subtitleColor": "#b8b8b8"
+    "color": "#ffffff"
   }
 }
 ```

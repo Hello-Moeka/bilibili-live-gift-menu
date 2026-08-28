@@ -16,9 +16,7 @@ const previewRoot = document.getElementById('preview-root');
 const bgInput = document.getElementById('bg-input');
 const fontFamilyInput = document.getElementById('font-family-input');
 const fontSizeInput = document.getElementById('font-size-input');
-const subtitleSizeInput = document.getElementById('subtitle-size-input');
 const colorInput = document.getElementById('color-input');
-const subtitleColorInput = document.getElementById('subtitle-color-input');
 
 function setStatus(type, message) {
   statusBar.className = `status-bar ${type}`;
@@ -34,9 +32,7 @@ function getStyleFromForm() {
     bg: bgInput.checked,
     fontFamily: fontFamilyInput.value,
     fontSize: fontSizeInput.value,
-    subtitleSize: subtitleSizeInput.value,
     color: colorInput.value,
-    subtitleColor: subtitleColorInput.value,
   });
 }
 
@@ -228,9 +224,7 @@ function applyStyleToForm(style) {
     ? s.fontFamily
     : (s.fontFamily || FONT_PRESETS[0].value);
   fontSizeInput.value = s.fontSize;
-  subtitleSizeInput.value = s.subtitleSize;
   colorInput.value = toHexColor(s.color, '#ffffff');
-  subtitleColorInput.value = toHexColor(s.subtitleColor, '#b8b8b8');
 }
 
 function toHexColor(value, fallback) {
@@ -258,7 +252,7 @@ document.getElementById('copy-url-btn').addEventListener('click', async () => {
   }
 });
 
-[bgInput, fontFamilyInput, fontSizeInput, subtitleSizeInput, colorInput, subtitleColorInput]
+[bgInput, fontFamilyInput, fontSizeInput, colorInput]
   .forEach((el) => el.addEventListener('input', updateUrl));
 bgInput.addEventListener('change', updateUrl);
 

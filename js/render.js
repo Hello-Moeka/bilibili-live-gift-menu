@@ -1,12 +1,10 @@
-/** @typedef {{ bg?: boolean, fontFamily?: string, fontSize?: number, subtitleSize?: number, color?: string, subtitleColor?: string }} MenuStyle */
+/** @typedef {{ bg?: boolean, fontFamily?: string, fontSize?: number, color?: string }} MenuStyle */
 
 export const DEFAULT_STYLE = {
   bg: false,
   fontFamily: 'PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif',
   fontSize: 22,
-  subtitleSize: 14,
   color: '#ffffff',
-  subtitleColor: 'rgba(255, 255, 255, 0.72)',
 };
 
 export const FONT_PRESETS = [
@@ -36,9 +34,7 @@ export function normalizeStyle(style = {}) {
     bg: Boolean(style.bg),
     fontFamily: style.fontFamily || DEFAULT_STYLE.fontFamily,
     fontSize: Math.max(12, Number(style.fontSize) || DEFAULT_STYLE.fontSize),
-    subtitleSize: Math.max(10, Number(style.subtitleSize) || DEFAULT_STYLE.subtitleSize),
     color: style.color || DEFAULT_STYLE.color,
-    subtitleColor: style.subtitleColor || DEFAULT_STYLE.subtitleColor,
   };
 }
 
@@ -48,16 +44,14 @@ export function applyMenuStyle(overlay, style) {
   overlay.classList.toggle('has-bg', s.bg);
   overlay.style.fontFamily = s.fontFamily;
   overlay.style.setProperty('--menu-font-size', `${s.fontSize}px`);
-  overlay.style.setProperty('--menu-subtitle-size', `${s.subtitleSize}px`);
   overlay.style.setProperty('--menu-color', s.color);
-  overlay.style.setProperty('--menu-subtitle-color', s.subtitleColor);
 }
 
 function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-/** @param {HTMLElement} root @param {{ title?: string, items: object[], style?: MenuStyle }} config */
+/** @param {HTMLElement} root @param {{ items: object[], style?: MenuStyle }} config */
 export function renderMenu(root, config) {
   const style = normalizeStyle(config.style);
   const validItems = (config.items || []).filter((item) => item.giftId && item.text);

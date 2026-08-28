@@ -4,9 +4,8 @@
  *
  * JSON 结构:
  * {
- *   title?: string,
- *   items: Array<{ giftId, count, text, icon? }>,
- *   style?: { bg, fontFamily, fontSize, subtitleSize, color, subtitleColor }
+ *   items: Array<{ giftId, count, text, icon?, giftName? }>,
+ *   style?: { bg, fontFamily, fontSize, color }
  * }
  */
 
@@ -30,32 +29,31 @@ function fromBase64Url(b64) {
   return new TextDecoder().decode(bytes);
 }
 
-/** @returns {{ title: string, items: object[] }} */
+/** @returns {{ items: object[], style: object }} */
 export function parseConfigFromUrl(search = location.search) {
   const params = new URLSearchParams(search);
   const encoded = params.get('c');
   if (!encoded) {
-    return { title: '', items: [], style: normalizeStyle() };
+    return { items: [], style: normalizeStyle() };
   }
   try {
     const json = fromBase64Url(encoded);
     const data = JSON.parse(json);
     return {
-      title: typeof data.title === 'string' ? data.title : '',
       items: Array.isArray(data.items) ? data.items : [],
       style: normalizeStyle(data.style),
     };
   } catch {
-    return { title: '', items: [], style: normalizeStyle() };
+    return { items: [], style: normalizeStyle() };
   }
 }
 
-/** @param {{ title?: string, items: object[], style?: object }} config */
+/** @param {{ items: object[], style?: object }} config */
 export function encodeConfigToParam(config) {
   return encodeDraftToParam(config, { validOnly: true });
 }
 
-/** @param {{ title?: string, items: object[], style?: object }} config @param {{ validOnly?: boolean }} [options] */
+/** @param {{ items: object[], style?: object }} config @param {{ validOnly?: boolean }} [options] */
 export function encodeDraftToParam(config, { validOnly = false } = {}) {
   const style = normalizeStyle(config.style);
   let items = (config.items || []).map((item) => ({
@@ -78,9 +76,7 @@ export function encodeDraftToParam(config, { validOnly = false } = {}) {
       bg: style.bg,
       fontFamily: style.fontFamily,
       fontSize: style.fontSize,
-      subtitleSize: style.subtitleSize,
       color: style.color,
-      subtitleColor: style.subtitleColor,
     },
   };
   return toBase64Url(JSON.stringify(payload));
@@ -100,14 +96,13 @@ export function saveDraft(config) {
   }
 }
 
-/** @returns {{ title: string, items: object[], style: object } | null} */
+/** @returns {{ items: object[], style: object } | null} */
 export function loadDraft() {
   try {
     const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
     return {
-      title: '',
       items: Array.isArray(data.items) ? data.items : [],
       style: normalizeStyle(data.style),
     };
@@ -122,7 +117,7 @@ export function loadSettingsConfig() {
   if (params.get('c')) {
     return parseConfigFromUrl();
   }
-  return loadDraft() || { title: '', items: [], style: normalizeStyle() };
+  return loadDraft() || { items: [], style: normalizeStyle() };
 }
 
 /** 将当前草稿同步到设置页地址栏，刷新后仍可恢复 */
@@ -133,7 +128,7 @@ export function syncSettingsUrl(config) {
   history.replaceState(null, '', url);
 }
 
-/** @param {{ title?: string, items: object[] }} config @param {string} [basePath] */
+/** @param {{ items: object[] }} config @param {string} [basePath] */
 export function buildDisplayUrl(config, basePath = 'index.html') {
   const param = encodeConfigToParam(config);
   const url = new URL(basePath, location.href);
