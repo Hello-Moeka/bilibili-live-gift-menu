@@ -1,4 +1,4 @@
-import { parseConfigFromUrl, buildDisplayUrl } from './config.js';
+import { loadSettingsConfig, buildDisplayUrl, saveDraft, syncSettingsUrl } from './config.js';
 import { fetchGiftList, searchGifts, getGiftIcon, formatGiftPrice, GUARD_ITEMS, getGiftById, resolveGiftIconUrl } from './gifts.js';
 import { renderMenu, FONT_PRESETS, normalizeStyle } from './render.js';
 
@@ -48,6 +48,7 @@ function getConfigFromForm() {
       count: Math.max(1, Number(row.querySelector('.count-input')?.value) || 1),
       text: row.querySelector('.text-input')?.value.trim() || '',
       icon: row.dataset.giftIcon || '',
+      giftName: row.querySelector('.gift-select-input')?.value.trim() || '',
     })),
   };
 }
@@ -56,6 +57,8 @@ function updateUrl() {
   config = getConfigFromForm();
   const url = buildDisplayUrl(config, 'index.html');
   urlInput.value = url;
+  saveDraft(config);
+  syncSettingsUrl(config);
   renderPreview(config);
 }
 
@@ -261,7 +264,7 @@ async function init() {
     return;
   }
 
-  config = parseConfigFromUrl();
+  config = loadSettingsConfig();
   applyStyleToForm(config.style);
   renderItems();
   updateUrl();

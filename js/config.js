@@ -52,14 +52,28 @@ export function parseConfigFromUrl(search = location.search) {
 
 /** @param {{ title?: string, items: object[], style?: object }} config */
 export function encodeConfigToParam(config) {
+  return encodeDraftToParam(config, { validOnly: true });
+}
+
+/** @param {{ title?: string, items: object[], style?: object }} config @param {{ validOnly?: boolean }} [options] */
+export function encodeDraftToParam(config, { validOnly = false } = {}) {
   const style = normalizeStyle(config.style);
+  let items = (config.items || []).map((item) => ({
+    giftId: Number(item.giftId) || 0,
+    count: Math.max(1, Number(item.count) || 1),
+    text: String(item.text || '').trim(),
+    icon: item.icon || '',
+    giftName: item.giftName || '',
+  }));
+
+  if (validOnly) {
+    items = items.filter((item) => item.giftId && item.text);
+  } else {
+    items = items.filter((item) => item.giftId || item.text || item.icon);
+  }
+
   const payload = {
-    items: (config.items || []).map((item) => ({
-      giftId: Number(item.giftId) || 0,
-      count: Math.max(1, Number(item.count) || 1),
-      text: String(item.text || '').trim(),
-      icon: item.icon || '',
-    })).filter((item) => item.giftId && item.text),
+    items,
     style: {
       bg: style.bg,
       fontFamily: style.fontFamily,
@@ -70,6 +84,53 @@ export function encodeConfigToParam(config) {
     },
   };
   return toBase64Url(JSON.stringify(payload));
+}
+
+const DRAFT_STORAGE_KEY = 'bilibili-live-gift-menu:draft';
+
+/** @param {{ items: object[], style?: object }} config */
+export function saveDraft(config) {
+  try {
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
+      items: config.items || [],
+      style: normalizeStyle(config.style),
+    }));
+  } catch {
+    // 隐私模式或存储已满时忽略
+  }
+}
+
+/** @returns {{ title: string, items: object[], style: object } | null} */
+export function loadDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    return {
+      title: '',
+      items: Array.isArray(data.items) ? data.items : [],
+      style: normalizeStyle(data.style),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** 设置页加载：URL 参数优先，否则读取本地草稿 */
+export function loadSettingsConfig() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('c')) {
+    return parseConfigFromUrl();
+  }
+  return loadDraft() || { title: '', items: [], style: normalizeStyle() };
+}
+
+/** 将当前草稿同步到设置页地址栏，刷新后仍可恢复 */
+export function syncSettingsUrl(config) {
+  const param = encodeDraftToParam(config);
+  const url = new URL(location.pathname, location.href);
+  url.search = `c=${param}`;
+  history.replaceState(null, '', url);
 }
 
 /** @param {{ title?: string, items: object[] }} config @param {string} [basePath] */
