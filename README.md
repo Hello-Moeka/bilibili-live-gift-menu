@@ -64,11 +64,16 @@ python server.py
 
 ## 礼物 API
 
-使用 B 站直播礼物面板接口（无需登录）：
+本地代理 `/api/gifts` 会合并两个 B 站接口（无需登录）：
+
+- **礼物列表**：`giftConfig`（全量礼物名称、价格）
+- **动态图标**：`roomGiftList`（指定直播间礼物面板中的当前图标）
 
 ```
-GET https://api.live.bilibili.com/xlive/web-room/v1/giftPanel/giftConfig?platform=pc&source=live
+GET /api/gifts?room_id=2233
 ```
+
+设置页可填写「直播间号」以拉取对应房间的礼物图标；大航海（舰长/提督/总督）仍使用本地图标。
 
 ## 许可证
 

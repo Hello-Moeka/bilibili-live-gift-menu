@@ -1,5 +1,5 @@
 import { loadSettingsConfig, buildDisplayUrl, saveDraft, syncSettingsUrl } from './config.js';
-import { fetchGiftList, searchGifts, getGiftIcon, formatGiftPrice, GUARD_ITEMS, getGiftById, resolveGiftIconUrl } from './gifts.js';
+import { fetchGiftList, searchGifts, getGiftIcon, formatGiftPrice, GUARD_ITEMS, getGiftById, resolveGiftIconUrl, bindGiftImage } from './gifts.js';
 import { renderMenu, FONT_PRESETS, normalizeStyle } from './render.js';
 
 /** @type {object[]} */
@@ -17,10 +17,48 @@ const bgInput = document.getElementById('bg-input');
 const fontFamilyInput = document.getElementById('font-family-input');
 const fontSizeInput = document.getElementById('font-size-input');
 const colorInput = document.getElementById('color-input');
+const roomIdInput = document.getElementById('room-id-input');
+
+const ROOM_ID_STORAGE_KEY = 'bilibili-live-gift-menu:roomId';
 
 function setStatus(type, message) {
   statusBar.className = `status-bar ${type}`;
   statusBar.textContent = message;
+}
+
+function getRoomId() {
+  const value = roomIdInput.value.trim();
+  return value || '2233';
+}
+
+function saveRoomId() {
+  try {
+    localStorage.setItem(ROOM_ID_STORAGE_KEY, getRoomId());
+  } catch {
+    // 隐私模式或存储已满时忽略
+  }
+}
+
+function loadRoomId() {
+  try {
+    const saved = localStorage.getItem(ROOM_ID_STORAGE_KEY);
+    if (saved) roomIdInput.value = saved;
+  } catch {
+    // 忽略
+  }
+}
+
+async function loadGiftList() {
+  setStatus('loading', '正在从 B 站拉取礼物列表…');
+  try {
+    giftList = await fetchGiftList('/api', getRoomId());
+    const roomId = getRoomId();
+    setStatus('success', `已加载 ${giftList.length} 个礼物（房间 ${roomId} 动态图标）`);
+    return true;
+  } catch (err) {
+    setStatus('error', `礼物列表加载失败：${err.message}。请确认已通过 python server.py 启动本地服务。`);
+    return false;
+  }
 }
 
 function createEmptyItem() {
@@ -70,8 +108,7 @@ function appendGiftOption(dropdown, row, gift) {
   opt.className = 'gift-option';
   opt.dataset.giftId = gift.id;
   const img = document.createElement('img');
-  img.src = getGiftIcon(gift);
-  img.alt = '';
+  bindGiftImage(img, gift);
   const name = document.createElement('span');
   name.textContent = gift.name;
   const meta = document.createElement('span');
@@ -122,7 +159,7 @@ function selectGift(row, gift) {
   row.dataset.giftId = gift.id;
   row.dataset.giftIcon = resolveGiftIconUrl(getGiftIcon(gift));
   const preview = row.querySelector('.gift-preview');
-  preview.src = getGiftIcon(gift);
+  bindGiftImage(preview, gift);
   preview.style.visibility = 'visible';
   const input = row.querySelector('.gift-select-input');
   input.value = gift.name;
@@ -138,9 +175,19 @@ function createItemRow(item = createEmptyItem()) {
 
   const preview = document.createElement('img');
   preview.className = 'gift-preview';
-  preview.src = item.icon || '';
   preview.alt = '';
-  if (!item.icon) preview.style.visibility = 'hidden';
+  if (item.giftId) {
+    const g = giftList.find((x) => x.id === item.giftId) || getGiftById(item.giftId);
+    if (g) bindGiftImage(preview, g);
+    else if (item.icon) {
+      preview.src = item.icon;
+      preview.referrerPolicy = 'no-referrer';
+    }
+  } else if (item.icon) {
+    preview.src = item.icon;
+    preview.referrerPolicy = 'no-referrer';
+  }
+  if (!preview.src) preview.style.visibility = 'hidden';
 
   const selectWrap = document.createElement('div');
   selectWrap.className = 'gift-select-wrap';
@@ -256,16 +303,17 @@ document.getElementById('copy-url-btn').addEventListener('click', async () => {
   .forEach((el) => el.addEventListener('input', updateUrl));
 bgInput.addEventListener('change', updateUrl);
 
+roomIdInput.addEventListener('change', async () => {
+  saveRoomId();
+  const ok = await loadGiftList();
+  if (ok) renderItems();
+});
+
 async function init() {
   populateFontSelect();
-  setStatus('loading', '正在从 B 站拉取礼物列表…');
-  try {
-    giftList = await fetchGiftList('/api');
-    setStatus('success', `已加载 ${giftList.length} 个礼物`);
-  } catch (err) {
-    setStatus('error', `礼物列表加载失败：${err.message}。请确认已通过 python server.py 启动本地服务。`);
-    return;
-  }
+  loadRoomId();
+  const ok = await loadGiftList();
+  if (!ok) return;
 
   config = loadSettingsConfig();
   applyStyleToForm(config.style);

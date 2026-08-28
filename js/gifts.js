@@ -33,9 +33,11 @@ let giftCache = null;
 /**
  * 获取礼物列表（设置页每次打开时调用）
  * @param {string} [apiBase] 本地代理前缀，如 '/api'；为空则直连 B 站 API（可能受 CORS 限制）
+ * @param {string} [roomId] 直播间号，用于拉取房间礼物面板的动态图标（经本地代理合并）
  */
-export async function fetchGiftList(apiBase = '') {
-  const url = apiBase ? `${apiBase}/gifts` : GIFT_API;
+export async function fetchGiftList(apiBase = '', roomId = '2233') {
+  const roomQuery = roomId ? `?room_id=${encodeURIComponent(roomId)}` : '';
+  const url = apiBase ? `${apiBase}/gifts${roomQuery}` : GIFT_API;
   const res = await fetch(url, {
     headers: { Accept: 'application/json' },
   });
@@ -74,7 +76,42 @@ export function searchGifts(list, keyword) {
 
 /** @param {object} gift */
 export function getGiftIcon(gift) {
-  return gift?.img_basic || gift?.img_dynamic || gift?.gif || '';
+  // gif 为礼物面板动图；img_basic 为静态缩略图（s1 域名，本地预览更稳）
+  return gift?.gif || gift?.img_basic || gift?.img_dynamic || '';
+}
+
+/** 静态缩略图，用于动图加载失败时回退 */
+export function getGiftIconStatic(gift) {
+  return gift?.img_basic || gift?.img_dynamic || '';
+}
+
+/**
+ * 绑定礼物图标到 <img>，处理 B 站 CDN 防盗链（i0 域名拒绝 localhost Referer）
+ * @param {HTMLImageElement} img
+ * @param {object} gift
+ */
+export function bindGiftImage(img, gift) {
+  if (!gift) {
+    img.removeAttribute('src');
+    return;
+  }
+  img.referrerPolicy = 'no-referrer';
+  img.alt = '';
+  const animated = gift.gif || '';
+  const staticIcon = getGiftIconStatic(gift);
+  const primary = animated || staticIcon;
+  img.onerror = null;
+  if (!primary) {
+    img.removeAttribute('src');
+    return;
+  }
+  img.src = primary;
+  if (animated && staticIcon && staticIcon !== animated) {
+    img.onerror = () => {
+      img.onerror = null;
+      img.src = staticIcon;
+    };
+  }
 }
 
 /** 将图标路径转为完整 URL，便于写入 OBS 配置 */

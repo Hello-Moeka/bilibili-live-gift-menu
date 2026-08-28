@@ -74,6 +74,7 @@ export function renderMenu(root, config) {
     const icon = document.createElement('img');
     icon.className = 'gift-icon';
     icon.alt = '';
+    icon.referrerPolicy = 'no-referrer';
     icon.src = item.icon || '';
     icon.onerror = () => { icon.style.visibility = 'hidden'; };
 
