@@ -14,6 +14,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from contextlib import contextmanager
+from http.cookies import SimpleCookie
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from pathlib import Path
@@ -46,6 +47,8 @@ MAX_ROOM_ID_LENGTH = 12
 MAX_CREATE_PER_MINUTE = 10
 MAX_GIFT_PER_MINUTE = 10
 TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_-]{20,32}$")
+LAST_TOKEN_COOKIE = "biligift_last_token"
+LAST_TOKEN_COOKIE_MAX_AGE = 10 * 365 * 24 * 60 * 60
 COLOR_PATTERN = re.compile(r"^#[0-9a-fA-F]{6}$")
 ICON_HOST_SUFFIXES = (".hdslb.com", ".bilibili.com", ".bilivideo.com")
 ICON_CONTENT_TYPES = {
@@ -373,6 +376,17 @@ class Handler(SimpleHTTPRequestHandler):
         raw = self.rfile.read(length)
         return json.loads(raw.decode("utf-8"))
 
+    def last_token_from_cookie(self):
+        """读取当前浏览器最近一次保存的 token；Cookie 本身不保存配置内容。"""
+        cookie = SimpleCookie()
+        try:
+            cookie.load(self.headers.get("Cookie", ""))
+        except ValueError:
+            return None
+        token = cookie.get(LAST_TOKEN_COOKIE)
+        token = token.value if token else ""
+        return token if TOKEN_PATTERN.fullmatch(token) else None
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == "/data" or parsed.path.startswith("/data/") or parsed.path == "/.git" or parsed.path.startswith("/.git/"):
@@ -388,6 +402,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/gifts":
             self.proxy_gifts(parsed.query)
+            return
+        if parsed.path == "/api/last-config":
+            self.get_last_config()
             return
         match = re.fullmatch(r"/api/configs/([A-Za-z0-9_-]{20,32})", parsed.path)
         if match:
@@ -411,7 +428,16 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             config = sanitize_config(self.read_json_body())
             token = create_config(config)
-            self.send_json(201, {"code": 0, "token": token, "config": config})
+            self.send_json(
+                201,
+                {"code": 0, "token": token, "config": config},
+                {
+                    "Set-Cookie": (
+                        f"{LAST_TOKEN_COOKIE}={token}; Max-Age={LAST_TOKEN_COOKIE_MAX_AGE}; "
+                        "Path=/; Secure; HttpOnly; SameSite=Lax"
+                    )
+                },
+            )
         except (ValueError, json.JSONDecodeError) as exc:
             self.api_error(400, str(exc))
         except Exception:
@@ -440,6 +466,21 @@ class Handler(SimpleHTTPRequestHandler):
             self.api_error(404, "配置不存在")
             return
         self.send_json(200, {"code": 0, "config": config}, {"Cache-Control": "no-cache, must-revalidate"})
+
+    def get_last_config(self):
+        token = self.last_token_from_cookie()
+        if not token:
+            self.api_error(404, "暂无最近保存的配置")
+            return
+        config = read_config(token)
+        if not config:
+            self.api_error(404, "最近保存的配置不存在")
+            return
+        self.send_json(
+            200,
+            {"code": 0, "token": token, "config": config},
+            {"Cache-Control": "no-store"},
+        )
 
     def serve_cached_icon(self, filename):
         target = (ICON_ROOT / filename).resolve()

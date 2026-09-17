@@ -206,6 +206,27 @@ export async function fetchConfigByToken(token) {
   };
 }
 
+/** 读取当前浏览器最近一次保存的配置；配置本体仍由后端返回。 */
+export async function fetchLastConfig() {
+  const res = await fetch('/api/last-config', {
+    headers: { Accept: 'application/json' },
+    credentials: 'same-origin',
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`最近配置读取失败 (${res.status})`);
+  const data = await res.json();
+  if (data.code !== 0 || !data.config || !data.token) {
+    throw new Error(data.message || '最近配置读取异常');
+  }
+  return {
+    token: data.token,
+    config: {
+      items: Array.isArray(data.config.items) ? data.config.items : [],
+      style: normalizeStyle(data.config.style),
+    },
+  };
+}
+
 /** @param {object} config */
 export async function saveConfigToServer(config) {
   const res = await fetch('/api/configs', {

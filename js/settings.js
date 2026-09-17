@@ -5,6 +5,7 @@ import {
   syncTokenUrl,
   getConfigToken,
   fetchConfigByToken,
+  fetchLastConfig,
   saveConfigToServer,
   buildTokenUrl,
 } from './config.js';
@@ -414,6 +415,13 @@ async function init() {
       savedToken = token;
     } else {
       config = loadSettingsConfig();
+      if (!config.items.length) {
+        const latest = await fetchLastConfig();
+        if (latest) {
+          config = latest.config;
+          savedToken = latest.token;
+        }
+      }
     }
   } catch (err) {
     setStatus('error', `配置读取失败：${err.message}`);
