@@ -14,8 +14,15 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from contextlib import contextmanager
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+from socketserver import ThreadingMixIn
 from pathlib import Path
+
+try:
+    from http.server import ThreadingHTTPServer
+except ImportError:  # Python 3.6 及更早版本
+    class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+        daemon_threads = True
 
 ROOT = Path(__file__).resolve().parent
 DATA_ROOT = Path(os.environ.get("BILIGIFT_DATA_DIR", ROOT / "data"))
