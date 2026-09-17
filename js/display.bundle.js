@@ -180,7 +180,6 @@
 
     validItems.forEach(appendItem);
     if (normalizeStyle(config.style).layout === 'horizontal') {
-      validItems.forEach(appendItem);
       list.className = 'menu-list menu-list-horizontal';
       list.style.setProperty('--menu-scroll-duration', Math.max(12, validItems.length * 4) + 's');
     }

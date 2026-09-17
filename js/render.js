@@ -99,7 +99,6 @@ export function renderMenu(root, config) {
 
   validItems.forEach(appendItem);
   if (style.layout === 'horizontal') {
-    validItems.forEach(appendItem);
     list.classList.add('menu-list-horizontal');
     list.style.setProperty('--menu-scroll-duration', `${Math.max(12, validItems.length * 4)}s`);
   }
