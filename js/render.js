@@ -105,4 +105,11 @@ export function renderMenu(root, config) {
 
   root.innerHTML = '';
   root.appendChild(list);
+  if (style.layout === 'horizontal') {
+    requestAnimationFrame(() => {
+      if (list.scrollWidth > root.clientWidth + 1) {
+        list.classList.add('is-scrolling');
+      }
+    });
+  }
 }

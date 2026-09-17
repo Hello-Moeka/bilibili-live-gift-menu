@@ -79,8 +79,11 @@ body.page-display {
   width: max-content;
   flex-direction: row;
   flex-wrap: nowrap;
-  animation: menu-scroll var(--menu-scroll-duration, 20s) linear infinite;
   will-change: transform;
+}
+
+.menu-list-horizontal.is-scrolling {
+  animation: menu-scroll var(--menu-scroll-duration, 20s) linear infinite;
 }
 
 .menu-list-horizontal .menu-item {

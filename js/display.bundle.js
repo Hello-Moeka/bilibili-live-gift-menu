@@ -186,6 +186,13 @@
 
     root.innerHTML = '';
     root.appendChild(list);
+    if (normalizeStyle(config.style).layout === 'horizontal') {
+      requestAnimationFrame(function () {
+        if (list.scrollWidth > root.clientWidth + 1) {
+          list.className = 'menu-list menu-list-horizontal is-scrolling';
+        }
+      });
+    }
   }
 
   function applyGiftIcons(items, iconMap) {
