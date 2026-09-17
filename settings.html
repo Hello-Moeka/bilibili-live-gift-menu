@@ -39,6 +39,13 @@
           <input type="color" id="color-input" value="#ffffff">
         </div>
         <div class="field">
+          <label for="layout-input">菜单方向</label>
+          <select id="layout-input">
+            <option value="vertical">纵向列表</option>
+            <option value="horizontal">横向滚动（从右向左）</option>
+          </select>
+        </div>
+        <div class="field">
           <label for="room-id-input">直播间号（礼物图标）</label>
           <input type="text" id="room-id-input" inputmode="numeric" pattern="[0-9]*" placeholder="2233" value="2233">
           <p class="field-hint">用于拉取该房间礼物面板的动态图标；修改后自动重新加载礼物列表。</p>
@@ -61,12 +68,21 @@
         <div id="preview-root"></div>
       </div>
       <div class="url-output">
-        <label for="url-output">浏览器源地址（OBS / 直播姬，配置已编码在 URL 中）</label>
+        <label for="url-output">浏览器源地址（OBS / 直播姬，配置由 token 从服务器读取）</label>
         <div class="url-box">
           <input type="text" id="url-output" readonly>
-          <button type="button" id="copy-url-btn" class="btn btn-primary">复制链接</button>
+          <button type="button" id="save-url-btn" class="btn btn-primary">保存并复制链接</button>
+          <button type="button" id="copy-url-btn" class="btn btn-secondary" disabled>复制当前链接</button>
         </div>
-        <p class="url-hint">OBS / 直播姬链接已缩短（图标由展示页自动加载）。修改配置后请重新复制；若提示「配置无效」说明链接被截断。</p>
+        <p class="url-hint">每次保存都会生成新的固定长度 token，旧链接永久保留。修改配置后请重新保存。</p>
+      </div>
+      <div class="url-output import-output">
+        <label for="import-token-input">导入已有 token 链接</label>
+        <div class="url-box">
+          <input type="text" id="import-token-input" placeholder="粘贴带 ?t= 的展示链接或 token">
+          <button type="button" id="import-token-btn" class="btn btn-secondary">导入配置</button>
+        </div>
+        <p class="url-hint">导入后作为本地草稿编辑，保存时会生成新的 token，不会修改原链接。</p>
       </div>
     </div>
 

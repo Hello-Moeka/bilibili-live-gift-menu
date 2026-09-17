@@ -1,10 +1,11 @@
-/** @typedef {{ bg?: boolean, fontFamily?: string, fontSize?: number, color?: string }} MenuStyle */
+/** @typedef {{ bg?: boolean, fontFamily?: string, fontSize?: number, color?: string, layout?: string, roomId?: string }} MenuStyle */
 
 export const DEFAULT_STYLE = {
   bg: false,
   fontFamily: 'PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif',
   fontSize: 22,
   color: '#ffffff',
+  layout: 'vertical',
 };
 
 export const FONT_PRESETS = [
@@ -33,8 +34,9 @@ export function normalizeStyle(style = {}) {
   return {
     bg: Boolean(style.bg),
     fontFamily: style.fontFamily || DEFAULT_STYLE.fontFamily,
-    fontSize: Math.max(12, Number(style.fontSize) || DEFAULT_STYLE.fontSize),
-    color: style.color || DEFAULT_STYLE.color,
+    fontSize: Math.max(12, Math.min(72, Number(style.fontSize) || DEFAULT_STYLE.fontSize)),
+    color: /^#[0-9a-f]{6}$/i.test(style.color || '') ? style.color : DEFAULT_STYLE.color,
+    layout: style.layout === 'horizontal' ? 'horizontal' : 'vertical',
     roomId: String(style.roomId || style.r || '2233'),
   };
 }
@@ -43,6 +45,7 @@ export function normalizeStyle(style = {}) {
 export function applyMenuStyle(overlay, style) {
   const s = normalizeStyle(style);
   overlay.classList.toggle('has-bg', s.bg);
+  overlay.classList.toggle('is-horizontal', s.layout === 'horizontal');
   overlay.style.fontFamily = s.fontFamily;
   overlay.style.setProperty('--menu-font-size', `${s.fontSize}px`);
   overlay.style.setProperty('--menu-color', s.color);
@@ -71,7 +74,7 @@ export function renderMenu(root, config) {
   const list = document.createElement('ul');
   list.className = 'menu-list';
 
-  validItems.forEach((item) => {
+  function appendItem(item) {
     const li = document.createElement('li');
     li.className = 'menu-item';
 
@@ -92,7 +95,14 @@ export function renderMenu(root, config) {
 
     li.append(icon, body);
     list.appendChild(li);
-  });
+  }
+
+  validItems.forEach(appendItem);
+  if (style.layout === 'horizontal') {
+    validItems.forEach(appendItem);
+    list.classList.add('menu-list-horizontal');
+    list.style.setProperty('--menu-scroll-duration', `${Math.max(12, validItems.length * 4)}s`);
+  }
 
   root.innerHTML = '';
   root.appendChild(list);

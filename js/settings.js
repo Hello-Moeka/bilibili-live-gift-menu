@@ -1,4 +1,13 @@
-import { loadSettingsConfig, buildDisplayUrl, saveDraft, syncSettingsUrl } from './config.js';
+import {
+  loadSettingsConfig,
+  saveDraft,
+  clearDraft,
+  syncTokenUrl,
+  getConfigToken,
+  fetchConfigByToken,
+  saveConfigToServer,
+  buildTokenUrl,
+} from './config.js';
 import { fetchGiftList, searchGifts, getGiftIcon, getGiftIconForExport, formatGiftPrice, GUARD_ITEMS, getGiftById, serializeGiftIconUrl, bindGiftImage } from './gifts.js';
 import { renderMenu, FONT_PRESETS, normalizeStyle } from './render.js';
 
@@ -7,6 +16,8 @@ let giftList = [];
 
 /** @type {{ items: object[], style: object }} */
 let config = { items: [], style: normalizeStyle() };
+let savedToken = null;
+let initializing = true;
 
 const statusBar = document.getElementById('status-bar');
 const itemsContainer = document.getElementById('menu-items');
@@ -17,7 +28,11 @@ const bgInput = document.getElementById('bg-input');
 const fontFamilyInput = document.getElementById('font-family-input');
 const fontSizeInput = document.getElementById('font-size-input');
 const colorInput = document.getElementById('color-input');
+const layoutInput = document.getElementById('layout-input');
 const roomIdInput = document.getElementById('room-id-input');
+const saveUrlBtn = document.getElementById('save-url-btn');
+const importTokenInput = document.getElementById('import-token-input');
+const importTokenBtn = document.getElementById('import-token-btn');
 
 const ROOM_ID_STORAGE_KEY = 'bilibili-live-gift-menu:roomId';
 
@@ -71,6 +86,8 @@ function getStyleFromForm() {
     fontFamily: fontFamilyInput.value,
     fontSize: fontSizeInput.value,
     color: colorInput.value,
+    layout: layoutInput.value,
+    roomId: getRoomId(),
   });
 }
 
@@ -89,14 +106,22 @@ function getConfigFromForm() {
 
 function updateUrl() {
   config = getConfigFromForm();
-  const url = buildDisplayUrl(config, 'index.html', getRoomId());
-  urlInput.value = url;
   saveDraft(config);
-  syncSettingsUrl(config);
-  renderPreview(config);
-  if (url.length > 800) {
-    setStatus('error', `链接较长（${url.length} 字符），直播姬可能截断，请确认完整复制`);
+  if (savedToken && !initializing) {
+    savedToken = null;
   }
+  if (!savedToken) {
+    urlInput.value = '';
+    const draftUrl = new URL(location.href);
+    draftUrl.search = '';
+    history.replaceState(null, '', draftUrl);
+    saveUrlBtn.textContent = '保存并复制链接';
+  } else {
+    urlInput.value = buildTokenUrl(savedToken);
+    saveUrlBtn.textContent = '保存为新 token 并复制';
+  }
+  document.getElementById('copy-url-btn').disabled = !urlInput.value;
+  renderPreview(config);
 }
 
 function renderPreview(cfg) {
@@ -275,6 +300,8 @@ function applyStyleToForm(style) {
     : (s.fontFamily || FONT_PRESETS[0].value);
   fontSizeInput.value = s.fontSize;
   colorInput.value = toHexColor(s.color, '#ffffff');
+  layoutInput.value = s.layout;
+  if (s.roomId) roomIdInput.value = s.roomId;
 }
 
 function toHexColor(value, fallback) {
@@ -291,37 +318,113 @@ document.getElementById('add-item-btn').addEventListener('click', () => {
   itemsContainer.appendChild(createItemRow());
 });
 
-document.getElementById('copy-url-btn').addEventListener('click', async () => {
+async function copyCurrentUrl() {
   try {
     await navigator.clipboard.writeText(urlInput.value);
     setStatus('success', '链接已复制到剪贴板');
-    setTimeout(() => setStatus('success', `已加载 ${giftList.length} 个礼物`), 3000);
   } catch {
     urlInput.select();
     setStatus('success', '请手动复制选中的链接');
   }
+}
+
+document.getElementById('copy-url-btn').addEventListener('click', copyCurrentUrl);
+
+saveUrlBtn.addEventListener('click', async () => {
+  const buttonText = saveUrlBtn.textContent;
+  saveUrlBtn.disabled = true;
+  try {
+    const current = getConfigFromForm();
+    const result = await saveConfigToServer(current);
+    savedToken = result.token;
+    config = current;
+    clearDraft();
+    syncTokenUrl(savedToken);
+    urlInput.value = buildTokenUrl(savedToken);
+    document.getElementById('copy-url-btn').disabled = false;
+    saveUrlBtn.textContent = '保存为新 token 并复制';
+    await copyCurrentUrl();
+    setStatus('success', '配置已保存，新的 token 链接已复制');
+  } catch (err) {
+    setStatus('error', `配置保存失败：${err.message}`);
+  } finally {
+    saveUrlBtn.disabled = false;
+    if (!saveUrlBtn.textContent) saveUrlBtn.textContent = buttonText;
+  }
 });
 
-[bgInput, fontFamilyInput, fontSizeInput, colorInput]
+function extractToken(value) {
+  const text = value.trim();
+  if (!text) return null;
+  try {
+    const url = new URL(text, location.href);
+    const token = getConfigToken(url.search);
+    if (token) return token;
+  } catch {
+    // 继续按裸 token 处理
+  }
+  return /^[A-Za-z0-9_-]{20,32}$/.test(text) ? text : null;
+}
+
+importTokenBtn.addEventListener('click', async () => {
+  const token = extractToken(importTokenInput.value);
+  if (!token) {
+    setStatus('error', '请输入有效的 token 链接或 token');
+    return;
+  }
+  importTokenBtn.disabled = true;
+  try {
+    const imported = await fetchConfigByToken(token);
+    savedToken = null;
+    config = imported;
+    applyStyleToForm(config.style);
+    const ok = await loadGiftList();
+    if (!ok) return;
+    renderItems();
+    updateUrl();
+    setStatus('success', '配置已导入为本地草稿，保存后会生成新的 token');
+    importTokenInput.value = '';
+  } catch (err) {
+    setStatus('error', `配置导入失败：${err.message}`);
+  } finally {
+    importTokenBtn.disabled = false;
+  }
+});
+
+[bgInput, fontFamilyInput, fontSizeInput, colorInput, layoutInput]
   .forEach((el) => el.addEventListener('input', updateUrl));
 bgInput.addEventListener('change', updateUrl);
 
 roomIdInput.addEventListener('change', async () => {
   saveRoomId();
   const ok = await loadGiftList();
-  if (ok) renderItems();
+  if (ok) {
+    renderItems();
+    updateUrl();
+  }
 });
 
 async function init() {
   populateFontSelect();
   loadRoomId();
+  const token = getConfigToken();
+  try {
+    if (token) {
+      config = await fetchConfigByToken(token);
+      savedToken = token;
+    } else {
+      config = loadSettingsConfig();
+    }
+  } catch (err) {
+    setStatus('error', `配置读取失败：${err.message}`);
+    return;
+  }
+  applyStyleToForm(config.style);
   const ok = await loadGiftList();
   if (!ok) return;
-
-  config = loadSettingsConfig();
-  applyStyleToForm(config.style);
   renderItems();
   updateUrl();
+  initializing = false;
 }
 
 init();

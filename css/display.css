@@ -54,6 +54,14 @@ body.page-display {
   border-radius: 2px 0 0 2px;
 }
 
+.menu-overlay.is-horizontal {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  padding-right: 0;
+}
+
 .menu-list {
   display: flex;
   flex-direction: column;
@@ -65,6 +73,27 @@ body.page-display {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.menu-list-horizontal {
+  width: max-content;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  animation: menu-scroll var(--menu-scroll-duration, 20s) linear infinite;
+  will-change: transform;
+}
+
+.menu-list-horizontal .menu-item {
+  flex-shrink: 0;
+}
+
+@keyframes menu-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 .gift-icon {

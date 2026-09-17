@@ -7,6 +7,7 @@
     fontFamily: 'PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif',
     fontSize: 22,
     color: '#ffffff',
+    layout: 'vertical',
     roomId: '2233',
   };
 
@@ -21,8 +22,9 @@
     return {
       bg: Boolean(style.bg),
       fontFamily: style.fontFamily || DEFAULT_STYLE.fontFamily,
-      fontSize: Math.max(12, Number(style.fontSize) || DEFAULT_STYLE.fontSize),
-      color: style.color || DEFAULT_STYLE.color,
+      fontSize: Math.max(12, Math.min(72, Number(style.fontSize) || DEFAULT_STYLE.fontSize)),
+      color: /^#[0-9a-f]{6}$/i.test(style.color || '') ? style.color : DEFAULT_STYLE.color,
+      layout: style.layout === 'horizontal' ? 'horizontal' : 'vertical',
       roomId: String(style.roomId || style.r || DEFAULT_STYLE.roomId),
     };
   }
@@ -78,6 +80,7 @@
           color: s.c || s.color,
           fontFamily: s.f || s.fontFamily,
           roomId: s.r || s.roomId,
+          layout: s.l === 'h' || s.layout === 'horizontal' ? 'horizontal' : 'vertical',
         }),
       };
     }
@@ -122,7 +125,7 @@
 
   function applyMenuStyle(overlay, style) {
     var s = normalizeStyle(style);
-    overlay.className = s.bg ? 'menu-overlay has-bg' : 'menu-overlay';
+    overlay.className = 'menu-overlay' + (s.bg ? ' has-bg' : '') + (s.layout === 'horizontal' ? ' is-horizontal' : '');
     overlay.style.fontFamily = s.fontFamily;
     overlay.style.setProperty('--menu-font-size', s.fontSize + 'px');
     overlay.style.setProperty('--menu-color', s.color);
@@ -146,7 +149,7 @@
     var list = document.createElement('ul');
     list.className = 'menu-list';
 
-    validItems.forEach(function (item) {
+    function appendItem(item) {
       var li = document.createElement('li');
       li.className = 'menu-item';
 
@@ -173,7 +176,14 @@
       li.appendChild(iconEl);
       li.appendChild(body);
       list.appendChild(li);
-    });
+    }
+
+    validItems.forEach(appendItem);
+    if (normalizeStyle(config.style).layout === 'horizontal') {
+      validItems.forEach(appendItem);
+      list.className = 'menu-list menu-list-horizontal';
+      list.style.setProperty('--menu-scroll-duration', Math.max(12, validItems.length * 4) + 's');
+    }
 
     root.innerHTML = '';
     root.appendChild(list);
@@ -220,6 +230,30 @@
     });
   }
 
+  function fetchTokenConfig(token, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/api/configs/' + encodeURIComponent(token));
+    xhr.onload = function () {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        callback(null);
+        return;
+      }
+      try {
+        var data = JSON.parse(xhr.responseText);
+        callback(data.code === 0 && data.config ? data.config : null);
+      } catch (e) {
+        callback(null);
+      }
+    };
+    xhr.onerror = function () { callback(null); };
+    xhr.send();
+  }
+
+  function getToken(search) {
+    var token = getQueryParam('t', search);
+    return token && /^[A-Za-z0-9_-]{20,32}$/.test(token) ? token : null;
+  }
+
   function boot() {
     var root = document.getElementById('menu-root');
     if (!root) return;
@@ -229,6 +263,22 @@
       config = parseConfigFromUrl();
     } catch (e) {
       root.innerHTML = '<div class="menu-empty">页面脚本异常，请刷新浏览器源</div>';
+      return;
+    }
+
+    var token = getToken();
+    if (token) {
+      fetchTokenConfig(token, function (remoteConfig) {
+        if (!remoteConfig) {
+          root.className = 'menu-overlay';
+          root.innerHTML = '<div class="menu-empty">配置不存在或已失效</div>';
+          return;
+        }
+        renderMenu(root, {
+          items: Array.isArray(remoteConfig.items) ? remoteConfig.items : [],
+          style: remoteConfig.style || {},
+        });
+      });
       return;
     }
 

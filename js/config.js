@@ -3,7 +3,7 @@
  * 参数: ?c=<base64url JSON>
  *
  * 展示页短格式（直播姬 URL 长度限制）:
- * { i: [{ g, n, t }], s: { b, z, c, f?, r? } }
+ * { i: [{ g, n, t }], s: { b, z, c, f?, r?, l? } }
  *
  * 设置页草稿完整格式:
  * { items: [{ giftId, count, text, icon?, giftName? }], style?: {...} }
@@ -45,6 +45,7 @@ function expandParsedConfig(data) {
         color: s.c ?? s.color,
         fontFamily: s.f ?? s.fontFamily,
         roomId: s.r ?? s.roomId,
+        layout: s.l === 'h' || s.layout === 'horizontal' ? 'horizontal' : 'vertical',
       }),
     };
   }
@@ -98,6 +99,9 @@ export function encodeConfigToParam(config, roomId = '2233') {
   if (style.fontFamily && style.fontFamily !== DEFAULT_STYLE.fontFamily) {
     shortStyle.f = style.fontFamily;
   }
+  if (style.layout === 'horizontal') {
+    shortStyle.l = 'h';
+  }
   if (roomId && roomId !== '2233') {
     shortStyle.r = roomId;
   }
@@ -136,6 +140,8 @@ export function encodeDraftToParam(config, { validOnly = false, forDisplay = fal
       fontFamily: style.fontFamily,
       fontSize: style.fontSize,
       color: style.color,
+      layout: style.layout,
+      roomId: style.roomId,
     },
   };
   return toBase64Url(JSON.stringify(payload));
@@ -177,6 +183,63 @@ export function loadSettingsConfig() {
     return parseConfigFromUrl();
   }
   return loadDraft() || { items: [], style: normalizeStyle() };
+}
+
+/** @returns {string | null} */
+export function getConfigToken(search = location.search) {
+  const params = new URLSearchParams(search);
+  const token = params.get('t');
+  return token && /^[A-Za-z0-9_-]{20,32}$/.test(token) ? token : null;
+}
+
+/** @param {string} token */
+export async function fetchConfigByToken(token) {
+  const res = await fetch(`/api/configs/${encodeURIComponent(token)}`, {
+    headers: { Accept: 'application/json' },
+  });
+  if (!res.ok) throw new Error(`配置读取失败 (${res.status})`);
+  const data = await res.json();
+  if (data.code !== 0 || !data.config) throw new Error(data.message || '配置读取异常');
+  return {
+    items: Array.isArray(data.config.items) ? data.config.items : [],
+    style: normalizeStyle(data.config.style),
+  };
+}
+
+/** @param {object} config */
+export async function saveConfigToServer(config) {
+  const res = await fetch('/api/configs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(config),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.code !== 0 || !data.token) {
+    throw new Error(data.message || `配置保存失败 (${res.status})`);
+  }
+  return data;
+}
+
+/** @param {string} token */
+export function buildTokenUrl(token, basePath = 'index.html') {
+  const url = new URL(basePath, location.href);
+  url.search = `t=${encodeURIComponent(token)}`;
+  return url.href;
+}
+
+/** @param {string} token */
+export function syncTokenUrl(token) {
+  const url = new URL(location.href);
+  url.search = `t=${encodeURIComponent(token)}`;
+  history.replaceState(null, '', url);
+}
+
+export function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    // 忽略
+  }
 }
 
 /** 将当前草稿同步到设置页地址栏，刷新后仍可恢复 */
