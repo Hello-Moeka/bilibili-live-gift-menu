@@ -101,10 +101,10 @@ body.page-display {
 
 @keyframes menu-scroll {
   from {
-    transform: translateX(0);
+    transform: translateX(var(--menu-scroll-from, 0px));
   }
   to {
-    transform: translateX(calc(-100% - var(--menu-scroll-gap, 0px)));
+    transform: translateX(-100%);
   }
 }
 

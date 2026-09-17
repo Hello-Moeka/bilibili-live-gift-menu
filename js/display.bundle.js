@@ -199,7 +199,10 @@
     if (normalizedStyle.layout === 'horizontal') {
       requestAnimationFrame(function () {
         if (list.scrollWidth > root.clientWidth + 1) {
-          list.style.setProperty('--menu-scroll-gap', root.clientWidth + 'px');
+          list.style.setProperty('--menu-scroll-from', '0px');
+          list.addEventListener('animationiteration', function () {
+            list.style.setProperty('--menu-scroll-from', root.clientWidth + 'px');
+          });
           list.className = 'menu-list menu-list-horizontal is-scrolling';
         }
       });

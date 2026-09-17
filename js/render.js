@@ -117,8 +117,11 @@ export function renderMenu(root, config) {
   if (style.layout === 'horizontal') {
     requestAnimationFrame(() => {
       if (list.scrollWidth > root.clientWidth + 1) {
-        // 首项立即显示；整组离开后保留一段等于预览宽度的空白再重置。
-        list.style.setProperty('--menu-scroll-gap', `${root.clientWidth}px`);
+        // 第一轮从当前位置开始；之后每轮从显示区域右侧重新进入。
+        list.style.setProperty('--menu-scroll-from', '0px');
+        list.addEventListener('animationiteration', () => {
+          list.style.setProperty('--menu-scroll-from', `${root.clientWidth}px`);
+        });
         list.classList.add('is-scrolling');
       }
     });
