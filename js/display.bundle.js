@@ -146,10 +146,11 @@
       return;
     }
 
-    var list = document.createElement('ul');
+    var normalizedStyle = normalizeStyle(config.style);
+    var list = document.createElement(normalizedStyle.layout === 'horizontal' ? 'div' : 'ul');
     list.className = 'menu-list';
 
-    function appendItem(item) {
+    function appendItem(container, item) {
       var li = document.createElement('li');
       li.className = 'menu-item';
 
@@ -175,20 +176,30 @@
 
       li.appendChild(iconEl);
       li.appendChild(body);
-      list.appendChild(li);
+      container.appendChild(li);
     }
 
-    validItems.forEach(appendItem);
-    if (normalizeStyle(config.style).layout === 'horizontal') {
+    function createSequence() {
+      var sequence = document.createElement('div');
+      sequence.className = 'menu-sequence';
+      validItems.forEach(function (item) { appendItem(sequence, item); });
+      return sequence;
+    }
+
+    if (normalizedStyle.layout === 'horizontal') {
       list.className = 'menu-list menu-list-horizontal';
       list.style.setProperty('--menu-scroll-duration', Math.max(12, validItems.length * 4) + 's');
+      list.appendChild(createSequence());
+    } else {
+      validItems.forEach(function (item) { appendItem(list, item); });
     }
 
     root.innerHTML = '';
     root.appendChild(list);
-    if (normalizeStyle(config.style).layout === 'horizontal') {
+    if (normalizedStyle.layout === 'horizontal') {
       requestAnimationFrame(function () {
         if (list.scrollWidth > root.clientWidth + 1) {
+          list.style.setProperty('--menu-scroll-gap', root.clientWidth + 'px');
           list.className = 'menu-list menu-list-horizontal is-scrolling';
         }
       });

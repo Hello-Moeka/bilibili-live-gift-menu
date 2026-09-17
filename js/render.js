@@ -71,10 +71,10 @@ export function renderMenu(root, config) {
     return;
   }
 
-  const list = document.createElement('ul');
+  const list = document.createElement(style.layout === 'horizontal' ? 'div' : 'ul');
   list.className = 'menu-list';
 
-  function appendItem(item) {
+  function appendItem(container, item) {
     const li = document.createElement('li');
     li.className = 'menu-item';
 
@@ -94,13 +94,22 @@ export function renderMenu(root, config) {
     body.appendChild(main);
 
     li.append(icon, body);
-    list.appendChild(li);
+    container.appendChild(li);
   }
 
-  validItems.forEach(appendItem);
+  function createSequence() {
+    const sequence = document.createElement('div');
+    sequence.className = 'menu-sequence';
+    validItems.forEach((item) => appendItem(sequence, item));
+    return sequence;
+  }
+
   if (style.layout === 'horizontal') {
     list.classList.add('menu-list-horizontal');
     list.style.setProperty('--menu-scroll-duration', `${Math.max(12, validItems.length * 4)}s`);
+    list.appendChild(createSequence());
+  } else {
+    validItems.forEach((item) => appendItem(list, item));
   }
 
   root.innerHTML = '';
@@ -108,6 +117,8 @@ export function renderMenu(root, config) {
   if (style.layout === 'horizontal') {
     requestAnimationFrame(() => {
       if (list.scrollWidth > root.clientWidth + 1) {
+        // 首项立即显示；整组离开后保留一段等于预览宽度的空白再重置。
+        list.style.setProperty('--menu-scroll-gap', `${root.clientWidth}px`);
         list.classList.add('is-scrolling');
       }
     });

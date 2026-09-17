@@ -79,7 +79,16 @@ body.page-display {
   width: max-content;
   flex-direction: row;
   flex-wrap: nowrap;
+  gap: 0;
   will-change: transform;
+}
+
+.menu-sequence {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .menu-list-horizontal.is-scrolling {
@@ -92,10 +101,10 @@ body.page-display {
 
 @keyframes menu-scroll {
   from {
-    transform: translateX(100%);
+    transform: translateX(0);
   }
   to {
-    transform: translateX(-100%);
+    transform: translateX(calc(-100% - var(--menu-scroll-gap, 0px)));
   }
 }
 
